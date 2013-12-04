@@ -63,14 +63,14 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_opentable, 0, 0, 1)
     ZEND_ARG_INFO(0, uri)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_beginTrn, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_begintrn, 0, 0, 0)
     ZEND_ARG_INFO(0, bias)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_endTrn, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_endtrn, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_abortTrn, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_aborttrn, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_stat, 0, 0, 0)
@@ -374,35 +374,32 @@ static zend_function_entry php_transactd_database_methods[] = {
     TRANSACTD_ZEND_ME(Database, __construct,
                       arginfo_transactd_database___construct,
                       ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
-    TRANSACTD_ZEND_ME(Database, create, arginfo_transactd_database_create,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, open, arginfo_transactd_database_open,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, drop, arginfo_transactd_database_drop,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, close, arginfo_transactd_database_close,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, dbDef, arginfo_transactd_database_dbdef,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, openTable, arginfo_transactd_database_opentable,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, beginTrn, arginfo_transactd_database_beginTrn,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_MALIAS(Database, beginTransaction,
-                          beginTrn, arginfo_transactd_database_beginTrn,
-                          ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, endTrn, arginfo_transactd_database_endTrn,
-                      ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, create,
+                      arginfo_transactd_database_create, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, open,
+                      arginfo_transactd_database_open, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, drop,
+                      arginfo_transactd_database_drop, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, close,
+                      arginfo_transactd_database_close, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, dbDef,
+                      arginfo_transactd_database_dbdef, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, openTable,
+                      arginfo_transactd_database_opentable, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, beginTrn,
+                      arginfo_transactd_database_begintrn, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_MALIAS(Database, beginTransaction, beginTrn,
+                          arginfo_transactd_database_begintrn, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, endTrn,
+                      arginfo_transactd_database_endtrn, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_MALIAS(Database, commit, endTrn,
-                          arginfo_transactd_database_endTrn,
-                          ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, abortTrn, arginfo_transactd_database_abortTrn,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_MALIAS(Database, rollBack,
-                          abortTrn, arginfo_transactd_database_abortTrn,
-                          ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, stat, arginfo_transactd_database_stat,
-                      ZEND_ACC_PUBLIC)
+                          arginfo_transactd_database_endtrn, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, abortTrn,
+                      arginfo_transactd_database_aborttrn, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_MALIAS(Database, rollBack, abortTrn,
+                          arginfo_transactd_database_aborttrn, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, stat,
+                      arginfo_transactd_database_stat, ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };
 

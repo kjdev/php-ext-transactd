@@ -478,6 +478,8 @@ static zend_function_entry php_transactd_tabledef_methods[] = {
                       arginfo_transactd_tabledef_fielddefs, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(TableDef, update,
                       arginfo_transactd_tabledef_update, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_MALIAS(TableDef, write, update,
+                          arginfo_transactd_tabledef_update, ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };
 

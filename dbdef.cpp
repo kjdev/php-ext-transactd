@@ -54,6 +54,10 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_dbdef_popbackup, 0, 0, 1)
     ZEND_ARG_INFO(0, tableIndex)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_dbdef_stat, 0, 0, 0)
+    ZEND_ARG_INFO(0, stat)
+ZEND_END_ARG_INFO()
+
 static dbdef *
 php_transactd_get_dbdef(php_transactd_dbdef_t *intern TSRMLS_DC)
 {
@@ -213,6 +217,20 @@ TRANSACTD_ZEND_METHOD(DbDef, popBackup)
     RETURN_TRUE;
 }
 
+TRANSACTD_ZEND_METHOD(DbDef, stat)
+{
+    php_transactd_dbdef_t *intern;
+
+    if (zend_parse_parameters_none() == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_DBDEF_OBJ(intern, getThis());
+
+    RETURN_LONG(intern->def->stat());
+}
+
+
 static zend_function_entry php_transactd_dbdef_methods[] = {
     TRANSACTD_ZEND_ME(DbDef, __construct,
                       arginfo_transactd_dbdef___construct,
@@ -227,6 +245,8 @@ static zend_function_entry php_transactd_dbdef_methods[] = {
                       arginfo_transactd_dbdef_pushbackup, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(DbDef, popBackup,
                       arginfo_transactd_dbdef_popbackup, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(DbDef, stat,
+                      arginfo_transactd_dbdef_stat, ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };
 
