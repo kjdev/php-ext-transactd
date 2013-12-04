@@ -40,7 +40,7 @@ ZEND_MINIT_FUNCTION(transactd)
     ZEND_INIT_MODULE_GLOBALS(transactd, transactd_init_globals, NULL);
     REGISTER_INI_ENTRIES();
 
-    php_transactd_db_class_register(module_number TSRMLS_CC);
+    php_transactd_database_class_register(module_number TSRMLS_CC);
     php_transactd_table_class_register(module_number TSRMLS_CC);
     php_transactd_dbdef_class_register(module_number TSRMLS_CC);
     php_transactd_tabledef_class_register(module_number TSRMLS_CC);

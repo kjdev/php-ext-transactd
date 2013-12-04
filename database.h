@@ -14,9 +14,9 @@ extern "C" {
 
 #include "php_transactd.h"
 
-extern PHP_TRANSACTD_API zend_class_entry *php_transactd_db_ce;
+extern PHP_TRANSACTD_API zend_class_entry *php_transactd_database_ce;
 
-PHP_TRANSACTD_API int php_transactd_db_class_register(int module_number TSRMLS_DC);
+PHP_TRANSACTD_API int php_transactd_database_class_register(int module_number TSRMLS_DC);
 PHP_TRANSACTD_API void php_transactd_error(int flag, short code, char *table);
 
 #define TRANSACTD_DATABASE_OBJ(_self, _obj) \

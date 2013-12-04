@@ -90,16 +90,17 @@ ZEND_END_ARG_INFO()
 TRANSACTD_ZEND_METHOD(Table, __construct)
 {
     int rc;
-    long mode = 0;
-    char *owner = NULL, *uri = NULL;
+    long mode = TD_OPEN_NORMAL;
+    zval *owner = NULL, *uri = NULL;
+    char *ownerName = NULL, *openUri = NULL;
     zend_bool create = 1;
     zval *link, *name;
     zend_error_handling error_handling;
     php_transactd_table_t *intern;
 
     zend_replace_error_handling(EH_THROW, NULL, &error_handling TSRMLS_CC);
-    rc = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oz|lbss",
-                               &link, php_transactd_db_ce,
+    rc = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oz|lbzz",
+                               &link, php_transactd_database_ce,
                                &name, &mode, &create, &owner, &uri);
     zend_restore_error_handling(&error_handling TSRMLS_CC);
     if (rc == FAILURE) {
@@ -108,13 +109,24 @@ TRANSACTD_ZEND_METHOD(Table, __construct)
         RETURN_FALSE;
     }
 
+    if (owner && Z_TYPE_P(owner) != IS_NULL) {
+        convert_to_string(owner);
+        ownerName = Z_STRVAL_P(owner);
+    }
+
+    if (uri && Z_TYPE_P(uri) != IS_NULL) {
+        convert_to_string(uri);
+        openUri = Z_STRVAL_P(uri);
+    }
+
     TRANSACTD_TABLE_OBJ(intern, getThis());
 
     intern->link = link;
     zval_add_ref(&intern->link);
 
-    if (php_transactd_table_class_init(intern, return_value, name, mode, create,
-                                       owner, uri TSRMLS_CC) == FAILURE) {
+    if (php_transactd_table_class_init(intern, return_value, name, mode,
+                                       create, ownerName,
+                                       openUri TSRMLS_CC) == FAILURE) {
         TRANSACTD_EXCEPTION(0, "Transactd\\Table object has not been "
                             "correctly initialized by its constructor");
         RETURN_FALSE;
@@ -362,19 +374,6 @@ TRANSACTD_ZEND_METHOD(Table, seekNext)
     RETURN_TRUE;
 }
 
-TRANSACTD_ZEND_METHOD(Table, stat)
-{
-    php_transactd_table_t *intern;
-
-    if (zend_parse_parameters_none() == FAILURE) {
-        RETURN_FALSE;
-    }
-
-    TRANSACTD_TABLE_OBJ(intern, getThis());
-
-    RETURN_LONG(intern->table->stat());
-}
-
 TRANSACTD_ZEND_METHOD(Table, insert)
 {
     zend_bool ncc = 0;
@@ -470,6 +469,20 @@ TRANSACTD_ZEND_METHOD(Table, findNext)
     RETURN_TRUE;
 }
 
+TRANSACTD_ZEND_METHOD(Table, stat)
+{
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters_none() == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    RETURN_LONG(intern->table->stat());
+}
+
+
 static zend_function_entry php_transactd_table_methods[] = {
     TRANSACTD_ZEND_ME(Table, __construct, arginfo_transactd_table___construct,
                       ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
@@ -491,8 +504,6 @@ static zend_function_entry php_transactd_table_methods[] = {
                       ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(Table, seekNext, arginfo_transactd_table_seek,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, stat, arginfo_transactd_table_stat,
-                      ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(Table, insert, arginfo_transactd_table_insert,
                       ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(Table, update, arginfo_transactd_table_update,
@@ -502,6 +513,8 @@ static zend_function_entry php_transactd_table_methods[] = {
     TRANSACTD_ZEND_MALIAS(Table, delete, del, arginfo_transactd_table_del,
                           ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(Table, findNext, arginfo_transactd_table_findnext,
+                      ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, stat, arginfo_transactd_table_stat,
                       ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };

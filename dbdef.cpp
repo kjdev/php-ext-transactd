@@ -82,7 +82,7 @@ TRANSACTD_ZEND_METHOD(DbDef, __construct)
 
     zend_replace_error_handling(EH_THROW, NULL, &error_handling TSRMLS_CC);
     rc = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "O",
-                               &link, php_transactd_db_ce);
+                               &link, php_transactd_database_ce);
     zend_restore_error_handling(&error_handling TSRMLS_CC);
     if (rc == FAILURE) {
         RETURN_FALSE;

@@ -27,18 +27,18 @@ using namespace bzs::db::protocol::tdap;
 
 ZEND_EXTERN_MODULE_GLOBALS(transactd)
 
-zend_class_entry *php_transactd_db_ce;
-static zend_object_handlers php_transactd_db_handlers;
+zend_class_entry *php_transactd_database_ce;
+static zend_object_handlers php_transactd_database_handlers;
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db___construct, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_create, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_create, 0, 0, 1)
     ZEND_ARG_INFO(0, uri)
     ZEND_ARG_INFO(0, type)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_open, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_open, 0, 0, 1)
     ZEND_ARG_INFO(0, uri)
     ZEND_ARG_INFO(0, type)
     ZEND_ARG_INFO(0, mode)
@@ -46,16 +46,16 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_open, 0, 0, 1)
     ZEND_ARG_INFO(0, owner)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_close, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_close, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_drop, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_drop, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_dbdef, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_dbdef, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_opentable, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_opentable, 0, 0, 1)
     ZEND_ARG_INFO(0, name)
     ZEND_ARG_INFO(0, mode)
     ZEND_ARG_INFO(0, autoCreate)
@@ -63,17 +63,17 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_opentable, 0, 0, 1)
     ZEND_ARG_INFO(0, uri)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_beginTrn, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_beginTrn, 0, 0, 0)
     ZEND_ARG_INFO(0, bias)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_endTrn, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_endTrn, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_abortTrn, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_abortTrn, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_db_stat, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_stat, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 TRANSACTD_ZEND_METHOD(Database, __construct)
@@ -124,13 +124,13 @@ TRANSACTD_ZEND_METHOD(Database, open)
     int uri_len;
     long type = TYPE_SCHEMA_BDF;
     long mode = TD_OPEN_READONLY;
-    char *dir = NULL, *owner = NULL;
-    int dir_len = 0, owner_len = 0;
+    zval *dir = NULL, *owner = NULL;
+    char *dirPath = NULL, *ownerName = NULL;
     php_transactd_database_t *intern;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|llss",
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|llzz",
                               &uri, &uri_len, &type, &mode,
-                              &dir, &dir_len, &owner, &owner_len) == FAILURE) {
+                              &dir, &owner) == FAILURE) {
         RETURN_FALSE;
     }
 
@@ -146,7 +146,16 @@ TRANSACTD_ZEND_METHOD(Database, open)
         RETURN_FALSE;
     }
 
-    intern->db->open(uri, type, mode, dir, owner);
+    if (dir && Z_TYPE_P(dir) != IS_NULL) {
+        convert_to_string(dir);
+        dirPath = Z_STRVAL_P(dir);
+    }
+    if (owner && Z_TYPE_P(owner) != IS_NULL) {
+        convert_to_string(owner);
+        ownerName = Z_STRVAL_P(owner);
+    }
+
+    intern->db->open(uri, type, mode, dirPath, ownerName);
     if (intern->db->stat() != 0) {
         php_transactd_error(E_WARNING, intern->db->stat(), NULL);
         RETURN_FALSE;
@@ -240,14 +249,15 @@ TRANSACTD_ZEND_METHOD(Database, dbDef)
 
 TRANSACTD_ZEND_METHOD(Database, openTable)
 {
-    long mode = 0;
-    char *owner = NULL, *uri = NULL;
+    long mode = TD_OPEN_NORMAL;
+    zval *owner = NULL, *uri = NULL;
+    char *ownerName = NULL, *openUri = NULL;
     zend_bool create = 1;
     zval *name;
     php_transactd_database_t *intern;
     php_transactd_table_t *table;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|lbss",
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z|lbzz",
                               &name, &mode, &create, &owner, &uri) == FAILURE) {
         RETURN_FALSE;
     }
@@ -258,6 +268,16 @@ TRANSACTD_ZEND_METHOD(Database, openTable)
         RETURN_FALSE;
     }
 
+    if (owner && Z_TYPE_P(owner) != IS_NULL) {
+        convert_to_string(owner);
+        ownerName = Z_STRVAL_P(owner);
+    }
+
+    if (uri && Z_TYPE_P(uri) != IS_NULL) {
+        convert_to_string(uri);
+        openUri = Z_STRVAL_P(uri);
+    }
+
     object_init_ex(return_value, php_transactd_table_ce);
 
     TRANSACTD_TABLE_OBJ(table, return_value);
@@ -265,8 +285,9 @@ TRANSACTD_ZEND_METHOD(Database, openTable)
     table->link = getThis();
     zval_add_ref(&table->link);
 
-    if (php_transactd_table_class_init(table, return_value, name, mode, create,
-                                       owner, uri TSRMLS_CC) == FAILURE) {
+    if (php_transactd_table_class_init(table, return_value, name, mode,
+                                       create, ownerName,
+                                       openUri TSRMLS_CC) == FAILURE) {
         TRANSACTD_EXCEPTION(0, "Transactd\\Table object has not been "
                             "correctly initialized by its constructor");
         RETURN_FALSE;
@@ -349,42 +370,44 @@ TRANSACTD_ZEND_METHOD(Database, stat)
     RETURN_LONG(intern->db->stat());
 }
 
-static zend_function_entry php_transactd_db_methods[] = {
-    TRANSACTD_ZEND_ME(Database, __construct, arginfo_transactd_db___construct,
+static zend_function_entry php_transactd_database_methods[] = {
+    TRANSACTD_ZEND_ME(Database, __construct,
+                      arginfo_transactd_database___construct,
                       ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
-    TRANSACTD_ZEND_ME(Database, create, arginfo_transactd_db_create,
+    TRANSACTD_ZEND_ME(Database, create, arginfo_transactd_database_create,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, open, arginfo_transactd_db_open,
+    TRANSACTD_ZEND_ME(Database, open, arginfo_transactd_database_open,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, drop, arginfo_transactd_db_drop,
+    TRANSACTD_ZEND_ME(Database, drop, arginfo_transactd_database_drop,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, close, arginfo_transactd_db_close,
+    TRANSACTD_ZEND_ME(Database, close, arginfo_transactd_database_close,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, dbDef, arginfo_transactd_db_dbdef,
+    TRANSACTD_ZEND_ME(Database, dbDef, arginfo_transactd_database_dbdef,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, openTable, arginfo_transactd_db_opentable,
+    TRANSACTD_ZEND_ME(Database, openTable, arginfo_transactd_database_opentable,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, beginTrn, arginfo_transactd_db_beginTrn,
+    TRANSACTD_ZEND_ME(Database, beginTrn, arginfo_transactd_database_beginTrn,
                       ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_MALIAS(Database, beginTransaction,
-                          beginTrn, arginfo_transactd_db_beginTrn,
+                          beginTrn, arginfo_transactd_database_beginTrn,
                           ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, endTrn, arginfo_transactd_db_endTrn,
+    TRANSACTD_ZEND_ME(Database, endTrn, arginfo_transactd_database_endTrn,
                       ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_MALIAS(Database, commit, endTrn, arginfo_transactd_db_endTrn,
+    TRANSACTD_ZEND_MALIAS(Database, commit, endTrn,
+                          arginfo_transactd_database_endTrn,
                           ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, abortTrn, arginfo_transactd_db_abortTrn,
+    TRANSACTD_ZEND_ME(Database, abortTrn, arginfo_transactd_database_abortTrn,
                       ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_MALIAS(Database, rollBack,
-                          abortTrn, arginfo_transactd_db_abortTrn,
+                          abortTrn, arginfo_transactd_database_abortTrn,
                           ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Database, stat, arginfo_transactd_db_stat,
+    TRANSACTD_ZEND_ME(Database, stat, arginfo_transactd_database_stat,
                       ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };
 
 static void
-php_transactd_db_free_storage(void *object TSRMLS_DC)
+php_transactd_database_free_storage(void *object TSRMLS_DC)
 {
     php_transactd_database_t *intern = (php_transactd_database_t *)object;
 
@@ -405,8 +428,8 @@ php_transactd_db_free_storage(void *object TSRMLS_DC)
 }
 
 static zend_object_value
-php_transactd_db_new_ex(zend_class_entry *ce,
-                        php_transactd_database_t **ptr TSRMLS_DC)
+php_transactd_database_new_ex(zend_class_entry *ce,
+                              php_transactd_database_t **ptr TSRMLS_DC)
 {
     php_transactd_database_t *intern;
     zend_object_value retval;
@@ -423,9 +446,9 @@ php_transactd_db_new_ex(zend_class_entry *ce,
 
     retval.handle = zend_objects_store_put(
         intern, (zend_objects_store_dtor_t)zend_objects_destroy_object,
-        (zend_objects_free_object_storage_t)php_transactd_db_free_storage,
+        (zend_objects_free_object_storage_t)php_transactd_database_free_storage,
         NULL TSRMLS_CC);
-    retval.handlers = &php_transactd_db_handlers;
+    retval.handlers = &php_transactd_database_handlers;
 
     intern->db = NULL;
     intern->uri = NULL;
@@ -434,30 +457,30 @@ php_transactd_db_new_ex(zend_class_entry *ce,
 }
 
 static zend_object_value
-php_transactd_db_new(zend_class_entry *ce TSRMLS_DC)
+php_transactd_database_new(zend_class_entry *ce TSRMLS_DC)
 {
-    return php_transactd_db_new_ex(ce, NULL TSRMLS_CC);
+    return php_transactd_database_new_ex(ce, NULL TSRMLS_CC);
 }
 
 PHP_TRANSACTD_API int
-php_transactd_db_class_register(int module_number TSRMLS_DC)
+php_transactd_database_class_register(int module_number TSRMLS_DC)
 {
     zend_class_entry ce;
 
     INIT_CLASS_ENTRY(ce, ZEND_NS_NAME(TRANSACTD_NS, "Database"),
-                     php_transactd_db_methods);
+                     php_transactd_database_methods);
 
-    ce.create_object = php_transactd_db_new;
+    ce.create_object = php_transactd_database_new;
 
-    php_transactd_db_ce = zend_register_internal_class(&ce TSRMLS_CC);
-    if (php_transactd_db_ce == NULL) {
+    php_transactd_database_ce = zend_register_internal_class(&ce TSRMLS_CC);
+    if (php_transactd_database_ce == NULL) {
         return FAILURE;
     }
 
-    memcpy(&php_transactd_db_handlers, zend_get_std_object_handlers(),
+    memcpy(&php_transactd_database_handlers, zend_get_std_object_handlers(),
            sizeof(zend_object_handlers));
 
-    php_transactd_db_handlers.clone_obj = NULL;
+    php_transactd_database_handlers.clone_obj = NULL;
 
     /* constant */
     TRANSACTD_LONG_CONSTANT("TYPE_SCHEMA_BDF", TYPE_SCHEMA_BDF);
