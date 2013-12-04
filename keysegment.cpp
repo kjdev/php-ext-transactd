@@ -213,7 +213,7 @@ php_transactd_keysegment_class_init(php_transactd_keysegment_t *intern,
 
     TRANSACTD_FLAGS_OBJ(flags, obj);
 
-    flags->flags = &def->segments[intern->n].flags;
+    flags->flags = &(def->segments[intern->n].flags);
     flags->link = this_ptr;
     zval_add_ref(&flags->link);
 

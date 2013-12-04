@@ -28,12 +28,6 @@ ZEND_EXTERN_MODULE_GLOBALS(transactd)
 zend_class_entry *php_transactd_fielddef_ce;
 static zend_object_handlers php_transactd_fielddef_handlers;
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_fielddef___construct, 0, 0, 3)
-    ZEND_ARG_INFO(0, dbdef)
-    ZEND_ARG_INFO(0, tableIndex)
-    ZEND_ARG_INFO(0, insertIndex)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_fielddef___get, 0, 0, 1)
     ZEND_ARG_INFO(0, name)
 ZEND_END_ARG_INFO()
@@ -80,32 +74,9 @@ php_transactd_get_dbdef(php_transactd_fielddef_t *intern TSRMLS_DC)
 
 TRANSACTD_ZEND_METHOD(FieldDef, __construct)
 {
-    int rc;
-    php_transactd_fielddef_t *intern;
-    zval *link;
-    long tableIndex, insertIndex;
-    zend_error_handling error_handling;
-
-    zend_replace_error_handling(EH_THROW, NULL, &error_handling TSRMLS_CC);
-    rc = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oll",
-                               &link, php_transactd_tabledef_ce,
-                               &tableIndex, &insertIndex);
-    zend_restore_error_handling(&error_handling TSRMLS_CC);
-    if (rc == FAILURE) {
-        RETURN_FALSE;
-    }
-
-    TRANSACTD_FIELDDEF_OBJ(intern, getThis());
-
-    intern->link = link;
-    zval_add_ref(&intern->link);
-
-    if (php_transactd_fielddef_class_init(intern, tableIndex,
-                                          insertIndex TSRMLS_CC) == FAILURE) {
-        TRANSACTD_EXCEPTION(0, "Transactd\\FieldDef object has not been "
-                            "correctly initialized by its constructor");
-        RETURN_FALSE;
-    }
+    TRANSACTD_EXCEPTION(0, "Transactd\\FieldDef object has not been "
+                        "correctly initialized by its constructor");
+    RETURN_FALSE;
 }
 
 TRANSACTD_ZEND_METHOD(FieldDef, __get)
@@ -232,8 +203,7 @@ TRANSACTD_ZEND_METHOD(FieldDef, setCharsetIndex)
 
 static zend_function_entry php_transactd_fielddef_methods[] = {
     TRANSACTD_ZEND_ME(FieldDef, __construct,
-                      arginfo_transactd_fielddef___construct,
-                      ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
+                      NULL, ZEND_ACC_PRIVATE | ZEND_ACC_CTOR)
     TRANSACTD_ZEND_ME(FieldDef, __get,
                       arginfo_transactd_fielddef___get, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(FieldDef, __set,

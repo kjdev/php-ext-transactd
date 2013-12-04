@@ -28,9 +28,6 @@ ZEND_EXTERN_MODULE_GLOBALS(transactd)
 zend_class_entry *php_transactd_keydef_ce;
 static zend_object_handlers php_transactd_keydef_handlers;
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_keydef___construct, 0, 0, 0)
-ZEND_END_ARG_INFO()
-
 ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_keydef___get, 0, 0, 1)
     ZEND_ARG_INFO(0, name)
 ZEND_END_ARG_INFO()
@@ -42,32 +39,9 @@ ZEND_END_ARG_INFO()
 
 TRANSACTD_ZEND_METHOD(KeyDef, __construct)
 {
-    int rc;
-    php_transactd_keydef_t *intern;
-    long tableIndex, keyIndex;
-    zval *link;
-    zend_error_handling error_handling;
-
-    zend_replace_error_handling(EH_THROW, NULL, &error_handling TSRMLS_CC);
-    rc = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Oll",
-                               &link, php_transactd_tabledef_ce,
-                               &tableIndex, &keyIndex);
-    zend_restore_error_handling(&error_handling TSRMLS_CC);
-    if (rc == FAILURE) {
-        RETURN_FALSE;
-    }
-
-    TRANSACTD_KEYDEF_OBJ(intern, getThis());
-
-    intern->link = link;
-    zval_add_ref(&intern->link);
-
-    if (php_transactd_keydef_class_init(intern, return_value, tableIndex,
-                                        keyIndex TSRMLS_CC) == FAILURE) {
-        TRANSACTD_EXCEPTION(0, "Transactd\\KeyDef object has not been "
-                            "correctly initialized by its constructor");
-        RETURN_FALSE;
-    }
+    TRANSACTD_EXCEPTION(0, "Transactd\\KeyDef object has not been "
+                        "correctly initialized by its constructor");
+    RETURN_FALSE;
 }
 
 TRANSACTD_ZEND_METHOD(KeyDef, __get)
@@ -118,9 +92,8 @@ TRANSACTD_ZEND_METHOD(KeyDef, __set)
 }
 
 static zend_function_entry php_transactd_keydef_methods[] = {
-    TRANSACTD_ZEND_ME(KeyDef, __construct,
-                      arginfo_transactd_keydef___construct,
-                      ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
+    TRANSACTD_ZEND_ME(KeyDef, __construct, NULL,
+                      ZEND_ACC_PRIVATE | ZEND_ACC_CTOR)
     TRANSACTD_ZEND_ME(KeyDef, __get,
                       arginfo_transactd_keydef___get, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(KeyDef, __set,
