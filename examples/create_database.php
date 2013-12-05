@@ -63,7 +63,8 @@ function createUserTableSchema(\Transactd\DbDef $def)
 
 function createGroupTableSchema(\Transactd\DbDef $def)
 {
-    $td = $def->createTableDef();
+    //$td = $def->createTableDef();
+    $td = new \Transactd\TableDef($def);
 
     //Insert table
     $td->setTableName("group1");
@@ -96,7 +97,8 @@ function createGroupTableSchema(\Transactd\DbDef $def)
     $td->primaryKeyNum = $keyNum;
 
     //Write schema table
-    return $td->update();
+    //return $td->update();
+    return $td->write();
 }
 
 function createPictureTableSchema(\Transactd\DbDef $def)
