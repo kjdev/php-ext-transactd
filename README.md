@@ -60,3 +60,7 @@ DML操作
 * [レコードの削除](examples/delete_record.php)
 * [レコードのセットの読み取り](examples/read_records.php)
 * [トランザクション処理](examples/transaction.php)
+
+## Related
+
+* [api document](http://api.at-ninja.jp/php-ext-transactd/)
