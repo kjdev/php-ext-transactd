@@ -46,6 +46,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_open, 0, 0, 1)
     ZEND_ARG_INFO(0, owner)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_isopened, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_database_close, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -111,7 +114,7 @@ TRANSACTD_ZEND_METHOD(Database, create)
 
     intern->db->create(uri, type);
     if (intern->db->stat() != 0) {
-        php_transactd_error(E_WARNING, intern->db->stat(), NULL);
+        php_transactd_error(-1, intern->db->stat(), NULL);
         RETURN_FALSE;
     }
 
@@ -136,13 +139,13 @@ TRANSACTD_ZEND_METHOD(Database, open)
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
 
-    if (intern->uri) {
-        TRANSACTD_ERR(E_WARNING, "Already open: %s", Z_STRVAL_P(intern->uri));
+    if (intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "Already open: %s", Z_STRVAL_P(intern->uri));
         RETURN_FALSE;
     }
 
     if (!uri || uri_len <= 0) {
-        TRANSACTD_ERR(E_WARNING, "Empty uri");
+        TRANSACTD_EXCEPTION(0, "Empty uri");
         RETURN_FALSE;
     }
 
@@ -157,7 +160,7 @@ TRANSACTD_ZEND_METHOD(Database, open)
 
     intern->db->open(uri, type, mode, dirPath, ownerName);
     if (intern->db->stat() != 0) {
-        php_transactd_error(E_WARNING, intern->db->stat(), NULL);
+        php_transactd_error(-1, intern->db->stat(), NULL);
         RETURN_FALSE;
     }
 
@@ -165,6 +168,19 @@ TRANSACTD_ZEND_METHOD(Database, open)
     ZVAL_STRINGL(intern->uri, uri, uri_len, 1);
 
     RETURN_TRUE;
+}
+
+TRANSACTD_ZEND_METHOD(Database, isOpened)
+{
+    php_transactd_database_t *intern;
+
+    if (zend_parse_parameters_none() == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_DATABASE_OBJ(intern, getThis());
+
+    RETURN_BOOL(intern->db->isOpened());
 }
 
 TRANSACTD_ZEND_METHOD(Database, drop)
@@ -176,14 +192,14 @@ TRANSACTD_ZEND_METHOD(Database, drop)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
     intern->db->drop();
     if (intern->db->stat() != 0) {
-        php_transactd_error(E_WARNING, intern->db->stat(), NULL);
+        php_transactd_error(-1, intern->db->stat(), NULL);
         RETURN_FALSE;
     }
 
@@ -204,8 +220,8 @@ TRANSACTD_ZEND_METHOD(Database, close)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
@@ -227,8 +243,8 @@ TRANSACTD_ZEND_METHOD(Database, dbDef)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
@@ -263,8 +279,8 @@ TRANSACTD_ZEND_METHOD(Database, openTable)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
@@ -305,8 +321,8 @@ TRANSACTD_ZEND_METHOD(Database, beginTrn)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
@@ -324,8 +340,8 @@ TRANSACTD_ZEND_METHOD(Database, endTrn)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
@@ -343,8 +359,8 @@ TRANSACTD_ZEND_METHOD(Database, abortTrn)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
@@ -362,8 +378,8 @@ TRANSACTD_ZEND_METHOD(Database, stat)
     }
 
     TRANSACTD_DATABASE_OBJ(intern, getThis());
-    if (!intern->uri) {
-        TRANSACTD_EXCEPTION(0, "No open uri");
+    if (!intern->db->isOpened()) {
+        TRANSACTD_EXCEPTION(0, "No open database");
         RETURN_FALSE;
     }
 
@@ -378,6 +394,8 @@ static zend_function_entry php_transactd_database_methods[] = {
                       arginfo_transactd_database_create, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(Database, open,
                       arginfo_transactd_database_open, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Database, isOpened,
+                      arginfo_transactd_database_isopened, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(Database, drop,
                       arginfo_transactd_database_drop, ZEND_ACC_PUBLIC)
     TRANSACTD_ZEND_ME(Database, close,
@@ -413,8 +431,10 @@ php_transactd_database_free_storage(void *object TSRMLS_DC)
     }
 
     if (intern->db) {
-        if (intern->uri) {
+        if (intern->db->isOpened()) {
             intern->db->close();
+        }
+        if (intern->uri) {
             zval_ptr_dtor(&intern->uri);
         }
         database::destroy(intern->db);
@@ -545,6 +565,10 @@ php_transactd_database_class_register(int module_number TSRMLS_DC)
     TRANSACTD_LONG_CONSTANT("CHANGE_CURRENT_NCC", nstable::changeCurrentNcc);
     TRANSACTD_LONG_CONSTANT("CHANGE_IN_KEY", nstable::changeInKey);
 
+    TRANSACTD_LONG_CONSTANT("FIND_FORWARD", table::findForword);
+    TRANSACTD_LONG_CONSTANT("FIND_BACKFORWARD", table::findBackForword);
+
+    TRANSACTD_LONG_CONSTANT("STATUS_LIMMIT_OF_REJECT", STATUS_LIMMIT_OF_REJECT);
     TRANSACTD_LONG_CONSTANT("STATUS_EOF", STATUS_EOF);
 
     return SUCCESS;

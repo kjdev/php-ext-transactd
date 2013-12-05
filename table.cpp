@@ -39,6 +39,10 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_clearbuffer, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_fieldnumbyname, 0, 0, 1)
+    ZEND_ARG_INFO(0, name)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_setfv, 0, 0, 2)
     ZEND_ARG_INFO(0, key)
     ZEND_ARG_INFO(0, data)
@@ -59,12 +63,12 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_setkeynum, 0, 0, 1)
     ZEND_ARG_INFO(0, key)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_seekgreater, 0, 0, 1)
-    ZEND_ARG_INFO(0, equal)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_seek, 0, 0, 0)
     ZEND_ARG_INFO(0, lock)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_seek, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_seekgreater, 0, 0, 1)
+    ZEND_ARG_INFO(0, equal)
     ZEND_ARG_INFO(0, lock)
 ZEND_END_ARG_INFO()
 
@@ -83,8 +87,22 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_del, 0, 0, 1)
     ZEND_ARG_INFO(0, inkey)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_find, 0, 0, 1)
+    ZEND_ARG_INFO(0, type)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_findfirst, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_findnext, 0, 0, 0)
     ZEND_ARG_INFO(0, current)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_step, 0, 0, 0)
+    ZEND_ARG_INFO(0, lockBias)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_transactd_table_getfields, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 TRANSACTD_ZEND_METHOD(Table, __construct)
@@ -144,8 +162,22 @@ TRANSACTD_ZEND_METHOD(Table, clearBuffer)
     TRANSACTD_TABLE_OBJ(intern, getThis());
 
     intern->table->clearBuffer();
+}
 
-    RETURN_TRUE;
+TRANSACTD_ZEND_METHOD(Table, fieldNumByName)
+{
+    php_transactd_table_t *intern;
+    char *name;
+    int name_len;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s",
+                              &name, &name_len) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    RETURN_LONG(intern->table->fieldNumByName(name));
 }
 
 TRANSACTD_ZEND_METHOD(Table, setFV)
@@ -246,6 +278,34 @@ TRANSACTD_ZEND_METHOD(Table, getFVint)
     }
 }
 
+TRANSACTD_ZEND_METHOD(Table, getFVdbl)
+{
+    zval *key;
+    php_transactd_table_t *intern;
+    short num_key = 0;
+    char *str_key = NULL;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z",
+                              &key) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    if (Z_TYPE_P(key) == IS_LONG) {
+        num_key = (short)Z_LVAL_P(key);
+    } else {
+        convert_to_string(key);
+        str_key = Z_STRVAL_P(key);
+    }
+
+    if (str_key) {
+        RETURN_DOUBLE(intern->table->getFVdbl(str_key));
+    } else {
+        RETURN_DOUBLE(intern->table->getFVdbl(num_key));
+    }
+}
+
 TRANSACTD_ZEND_METHOD(Table, getFVstr)
 {
     zval *key;
@@ -310,6 +370,111 @@ TRANSACTD_ZEND_METHOD(Table, setKeyNum)
     RETURN_TRUE;
 }
 
+TRANSACTD_ZEND_METHOD(Table, seek)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->seek(lock);
+
+    if (intern->table->stat() != 0) {
+        RETURN_FALSE;
+    }
+
+    RETURN_TRUE;
+}
+
+TRANSACTD_ZEND_METHOD(Table, seekFirst)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->seekFirst(lock);
+
+    if (intern->table->stat() != 0) {
+        RETURN_FALSE;
+    }
+
+    RETURN_TRUE;
+}
+
+TRANSACTD_ZEND_METHOD(Table, seekLast)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->seekLast(lock);
+
+    if (intern->table->stat() != 0) {
+        RETURN_FALSE;
+    }
+
+    RETURN_TRUE;
+}
+
+TRANSACTD_ZEND_METHOD(Table, seekNext)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->seekNext(lock);
+
+    if (intern->table->stat() != 0) {
+        RETURN_FALSE;
+    }
+
+    RETURN_TRUE;
+}
+
+TRANSACTD_ZEND_METHOD(Table, seekPrev)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->seekPrev(lock);
+
+    if (intern->table->stat() != 0) {
+        RETURN_FALSE;
+    }
+
+    RETURN_TRUE;
+}
+
 TRANSACTD_ZEND_METHOD(Table, seekGreater)
 {
     zend_bool equal;
@@ -332,40 +497,20 @@ TRANSACTD_ZEND_METHOD(Table, seekGreater)
     RETURN_TRUE;
 }
 
-TRANSACTD_ZEND_METHOD(Table, seek)
+TRANSACTD_ZEND_METHOD(Table, seekLessThan)
 {
+    zend_bool equal;
     long lock = 0;
     php_transactd_table_t *intern;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
-                              &lock) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b|l",
+                              &equal, &lock) == FAILURE) {
         RETURN_FALSE;
     }
 
     TRANSACTD_TABLE_OBJ(intern, getThis());
 
-    intern->table->seek(lock);
-
-    if (intern->table->stat() != 0) {
-        RETURN_FALSE;
-    }
-
-    RETURN_TRUE;
-}
-
-TRANSACTD_ZEND_METHOD(Table, seekNext)
-{
-    long lock = 0;
-    php_transactd_table_t *intern;
-
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
-                              &lock) == FAILURE) {
-        RETURN_FALSE;
-    }
-
-    TRANSACTD_TABLE_OBJ(intern, getThis());
-
-    intern->table->seekNext(lock);
+    intern->table->seekLessThan(equal, lock);
 
     if (intern->table->stat() != 0) {
         RETURN_FALSE;
@@ -452,6 +597,57 @@ TRANSACTD_ZEND_METHOD(Table, del)
     RETURN_TRUE;
 }
 
+TRANSACTD_ZEND_METHOD(Table, find)
+{
+    long type;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l",
+                              &type) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    switch (type) {
+        case table::findBackForword:
+            intern->table->find(table::findBackForword);
+            break;
+        case table::findForword:
+        default:
+            intern->table->find(table::findForword);
+            break;
+    }
+}
+
+TRANSACTD_ZEND_METHOD(Table, findFirst)
+{
+    zend_bool notIncCurrent = 1;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters_none() == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->findFirst();
+}
+
+TRANSACTD_ZEND_METHOD(Table, findLast)
+{
+    zend_bool notIncCurrent = 1;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters_none() == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->findLast();
+}
+
 TRANSACTD_ZEND_METHOD(Table, findNext)
 {
     zend_bool notIncCurrent = 1;
@@ -465,8 +661,81 @@ TRANSACTD_ZEND_METHOD(Table, findNext)
     TRANSACTD_TABLE_OBJ(intern, getThis());
 
     intern->table->findNext(notIncCurrent);
+}
 
-    RETURN_TRUE;
+TRANSACTD_ZEND_METHOD(Table, findPrev)
+{
+    zend_bool notIncCurrent = 1;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|b",
+                              &notIncCurrent) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->findPrev(notIncCurrent);
+}
+
+TRANSACTD_ZEND_METHOD(Table, stepFirst)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->stepFirst((ushort_td)lock);
+}
+
+TRANSACTD_ZEND_METHOD(Table, stepLast)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->stepLast((ushort_td)lock);
+}
+
+TRANSACTD_ZEND_METHOD(Table, stepNext)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->stepNext((ushort_td)lock);
+}
+
+TRANSACTD_ZEND_METHOD(Table, stepPrev)
+{
+    long lock = 0;
+    php_transactd_table_t *intern;
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|l",
+                              &lock) == FAILURE) {
+        RETURN_FALSE;
+    }
+
+    TRANSACTD_TABLE_OBJ(intern, getThis());
+
+    intern->table->stepPrev((ushort_td)lock);
 }
 
 TRANSACTD_ZEND_METHOD(Table, stat)
@@ -482,40 +751,68 @@ TRANSACTD_ZEND_METHOD(Table, stat)
     RETURN_LONG(intern->table->stat());
 }
 
-
 static zend_function_entry php_transactd_table_methods[] = {
-    TRANSACTD_ZEND_ME(Table, __construct, arginfo_transactd_table___construct,
+    TRANSACTD_ZEND_ME(Table, __construct,
+                      arginfo_transactd_table___construct,
                       ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
-    TRANSACTD_ZEND_ME(Table, clearBuffer, arginfo_transactd_table_clearbuffer,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, setFV, arginfo_transactd_table_setfv,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, getFVint, arginfo_transactd_table_getfv,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, getFVstr, arginfo_transactd_table_getfv,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, setFilter, arginfo_transactd_table_setfilter,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, setKeyNum, arginfo_transactd_table_setkeynum,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, seekGreater, arginfo_transactd_table_seekgreater,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, seek, arginfo_transactd_table_seek,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, seekNext, arginfo_transactd_table_seek,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, insert, arginfo_transactd_table_insert,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, update, arginfo_transactd_table_update,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, del, arginfo_transactd_table_del,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_MALIAS(Table, delete, del, arginfo_transactd_table_del,
-                          ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, findNext, arginfo_transactd_table_findnext,
-                      ZEND_ACC_PUBLIC)
-    TRANSACTD_ZEND_ME(Table, stat, arginfo_transactd_table_stat,
-                      ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, clearBuffer,
+                      arginfo_transactd_table_clearbuffer, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, fieldNumByName,
+                      arginfo_transactd_table_fieldnumbyname, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, setFV,
+                      arginfo_transactd_table_setfv, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, getFVint,
+                      arginfo_transactd_table_getfv, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, getFVdbl,
+                      arginfo_transactd_table_getfv, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, getFVstr,
+                      arginfo_transactd_table_getfv, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, setFilter,
+                      arginfo_transactd_table_setfilter, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, setKeyNum,
+                      arginfo_transactd_table_setkeynum, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, seek,
+                      arginfo_transactd_table_seek, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, seekFirst,
+                      arginfo_transactd_table_seek, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, seekLast,
+                      arginfo_transactd_table_seek, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, seekNext,
+                      arginfo_transactd_table_seek, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, seekPrev,
+                      arginfo_transactd_table_seek, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, seekGreater,
+                      arginfo_transactd_table_seekgreater, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, seekLessThan,
+                      arginfo_transactd_table_seekgreater, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, insert,
+                      arginfo_transactd_table_insert, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, update,
+                      arginfo_transactd_table_update, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, del,
+                      arginfo_transactd_table_del, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_MALIAS(Table, delete, del,
+                          arginfo_transactd_table_del, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, find,
+                      arginfo_transactd_table_find, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, findFirst,
+                      arginfo_transactd_table_findfirst, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, findLast,
+                      arginfo_transactd_table_findfirst, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, findNext,
+                      arginfo_transactd_table_findnext, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, findPrev,
+                      arginfo_transactd_table_findnext, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, stepFirst,
+                      arginfo_transactd_table_step, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, stepLast,
+                      arginfo_transactd_table_step, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, stepNext,
+                      arginfo_transactd_table_step, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, stepPrev,
+                      arginfo_transactd_table_step, ZEND_ACC_PUBLIC)
+    TRANSACTD_ZEND_ME(Table, stat,
+                      arginfo_transactd_table_stat, ZEND_ACC_PUBLIC)
     ZEND_FE_END
 };
 

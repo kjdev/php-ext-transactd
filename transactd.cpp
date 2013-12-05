@@ -62,7 +62,7 @@ ZEND_MSHUTDOWN_FUNCTION(transactd)
 ZEND_MINFO_FUNCTION(transactd)
 {
     php_info_print_table_start();
-    php_info_print_table_row(2, "Extension load support", "enabled");
+    php_info_print_table_row(2, "Transactd support", "enabled");
     php_info_print_table_row(2, "Extension Version", TRANSACTD_EXT_VERSION);
     php_info_print_table_end();
 }
